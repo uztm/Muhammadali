@@ -9,11 +9,12 @@ import {
   WasteAnalytics,
   WasteReductionAdvice,
 } from '@/types';
+import { getHolidayForDate, getSeasonalMultiplier } from '@/constants/holidays';
 import { addDays, parseDateKey, sortByDateAsc, todayKey } from '@/utils/date';
 import { average, clamp, roundTo, roundToHalf, sum } from '@/utils/math';
 import { formatCurrency, formatKg } from '@/utils/format';
 
-const nextDayMultiplier = (date: Date) => {
+const dayOfWeekMultiplier = (date: Date) => {
   const multipliers = [1.12, 0.9, 0.93, 0.98, 1, 1.18, 1.16];
   return multipliers[date.getDay()] ?? 1;
 };
@@ -38,14 +39,20 @@ export const calculatePurchaseRecommendations = (
 
   return inventory
     .map((item) => {
-      const requirement = requirements.find((required) => required.itemId === item.id);
+      const requirement = requirements.find((r) => r.itemId === item.id);
       const requiredTomorrow = requirement?.requiredTomorrow ?? 0;
       const targetStock = Math.max(item.minimumStock, requiredTomorrow * 2);
       const deficit = targetStock - item.currentStock;
       const recommendedPurchase =
-        item.unit === 'pcs' ? Math.max(0, Math.ceil(deficit)) : roundTo(Math.max(0, deficit), 1);
+        item.unit === 'pcs'
+          ? Math.max(0, Math.ceil(deficit))
+          : roundTo(Math.max(0, deficit), 1);
       const urgency: UrgencyLevel =
-        item.currentStock < requiredTomorrow ? 'urgent' : item.currentStock < item.minimumStock ? 'watch' : 'ok';
+        item.currentStock < requiredTomorrow
+          ? 'urgent'
+          : item.currentStock < item.minimumStock
+            ? 'watch'
+            : 'ok';
       const reason =
         urgency === 'urgent'
           ? 'Stock is below tomorrow production requirement.'
@@ -79,26 +86,38 @@ export const forecastNextDay = (
   const sorted = sortByDateAsc(records);
   const recent = sorted.slice(-7);
   const previous = sorted.slice(-14, -7);
-  const averageSold = average(recent.map((record) => record.soldKg)) || settings.defaultCookKg * 0.8;
-  const averageWaste = average(recent.map((record) => record.wasteKg));
-  const previousAverageSold = average(previous.map((record) => record.soldKg)) || averageSold;
+  const averageSold = average(recent.map((r) => r.soldKg)) || settings.defaultCookKg * 0.8;
+  const averageWaste = average(recent.map((r) => r.wasteKg));
+  const previousAverageSold = average(previous.map((r) => r.soldKg)) || averageSold;
   const trendRatio = previousAverageSold > 0 ? averageSold / previousAverageSold : 1;
   const trendMultiplier = clamp(1 + (trendRatio - 1) * 0.45, 0.92, 1.1);
+
   const tomorrow = addDays(parseDateKey(todayKey()), 1);
-  const expectedSoldKg = roundTo(averageSold * nextDayMultiplier(tomorrow) * trendMultiplier, 1);
+  const dowMultiplier = dayOfWeekMultiplier(tomorrow);
+  const seasonal = getSeasonalMultiplier(tomorrow);
+  const holiday = getHolidayForDate(tomorrow);
+  const holidayMultiplier = holiday?.demandMultiplier ?? 1;
+
+  const expectedSoldKg = roundTo(
+    averageSold * dowMultiplier * seasonal * holidayMultiplier * trendMultiplier,
+    1,
+  );
   const safetyBufferKg = expectedSoldKg * (settings.safetyBufferPercent / 100);
   const recommendedCookKg = roundToHalf(expectedSoldKg + safetyBufferKg);
   const expectedWasteKg = roundTo(Math.max(0, recommendedCookKg - expectedSoldKg, averageWaste * 0.25), 1);
   const planningCookKg = settings.defaultCookKg;
   const reductionKg = roundTo(Math.max(0, planningCookKg - recommendedCookKg), 1);
   const possibleSavings = Math.round(Math.max(0, reductionKg) * settings.pricePerKg);
-  const volatility = average(recent.map((record) => Math.abs(record.soldKg - averageSold)));
+  const volatility = average(recent.map((r) => Math.abs(r.soldKg - averageSold)));
   const confidence = Math.round(clamp(88 - volatility * 12 - Math.abs(trendRatio - 1) * 30, 62, 93));
+
   const ingredientsRequired = buildIngredientRequirements(inventory, recommendedCookKg);
   const purchaseRecommendations = calculatePurchaseRecommendations(inventory, recommendedCookKg);
+
+  const holidayNote = holiday ? ` (${holiday.name} — ${Math.round((holidayMultiplier - 1) * 100)}% demand boost)` : '';
   const message =
     reductionKg > 0
-      ? `Reduce planned production by ${formatKg(reductionKg)} to lower waste risk.`
+      ? `Reduce production by ${formatKg(reductionKg)} to lower waste risk.`
       : `Maintain production near ${formatKg(recommendedCookKg)} for tomorrow.`;
 
   return {
@@ -108,9 +127,12 @@ export const forecastNextDay = (
     confidence,
     possibleSavings,
     reductionKg,
-    message,
+    message: message + holidayNote,
     ingredientsRequired,
     purchaseRecommendations,
+    holidayName: holiday?.name,
+    holidayMultiplier,
+    seasonalMultiplier: seasonal,
   };
 };
 
@@ -122,20 +144,24 @@ export const calculateWasteAnalytics = (
   const sorted = sortByDateAsc(records);
   const currentWeek = sorted.slice(-7);
   const previousWeek = sorted.slice(-14, -7);
-  const weeklyWasteKg = roundTo(sum(currentWeek.map((record) => record.wasteKg)), 1);
-  const weeklyCookedKg = sum(currentWeek.map((record) => record.cookedKg));
+  const weeklyWasteKg = roundTo(sum(currentWeek.map((r) => r.wasteKg)), 1);
+  const weeklyCookedKg = sum(currentWeek.map((r) => r.cookedKg));
   const wasteRate = weeklyCookedKg > 0 ? (weeklyWasteKg / weeklyCookedKg) * 100 : 0;
-  const wasteLoss = sum(currentWeek.map((record) => record.wasteLoss));
-  const previousWasteKg = sum(previousWeek.map((record) => record.wasteKg));
+  const wasteLoss = sum(currentWeek.map((r) => r.wasteLoss));
+  const previousWasteKg = sum(previousWeek.map((r) => r.wasteKg));
   const trendPercent =
     previousWasteKg > 0 ? ((weeklyWasteKg - previousWasteKg) / previousWasteKg) * 100 : 0;
-  const averageDailyWasteKg = roundTo(average(currentWeek.map((record) => record.wasteKg)), 1);
+  const averageDailyWasteKg = roundTo(average(currentWeek.map((r) => r.wasteKg)), 1);
   const bestDay = [...currentWeek].sort((a, b) => a.wasteKg - b.wasteKg)[0];
   const worstDay = [...currentWeek].sort((a, b) => b.wasteKg - a.wasteKg)[0];
   const recommendedCookKg =
-    forecast?.recommendedCookKg ?? roundToHalf(Math.max(0.5, average(currentWeek.map((record) => record.soldKg)) * 1.08));
+    forecast?.recommendedCookKg ??
+    roundToHalf(Math.max(0.5, average(currentWeek.map((r) => r.soldKg)) * 1.08));
   const targetReductionKg = roundTo(Math.max(0, settings.defaultCookKg - recommendedCookKg), 1);
-  const targetWasteRiskKg = roundTo(Math.max(0, settings.defaultCookKg - average(currentWeek.map((record) => record.soldKg))), 1);
+  const targetWasteRiskKg = roundTo(
+    Math.max(0, settings.defaultCookKg - average(currentWeek.map((r) => r.soldKg))),
+    1,
+  );
   const targetWeeklySavings = Math.round(targetReductionKg * 7 * settings.pricePerKg);
   const direction = trendPercent >= 0 ? 'increased' : 'decreased';
 
@@ -156,7 +182,7 @@ export const calculateWasteAnalytics = (
       `Waste ${direction} by ${Math.abs(Math.round(trendPercent))}% compared to last week.`,
       `Average daily waste is ${formatKg(averageDailyWasteKg)}.`,
       targetReductionKg > 0
-        ? `Target is ${formatKg(settings.defaultCookKg)}; forecast recommends ${formatKg(recommendedCookKg)}, saving around ${formatCurrency(targetWeeklySavings)} per week.`
+        ? `Forecast recommends ${formatKg(recommendedCookKg)}, saving around ${formatCurrency(targetWeeklySavings)} per week.`
         : `Current target is aligned with the forecasted cooking plan.`,
     ],
   };
@@ -167,9 +193,7 @@ export const calculateWasteReductionAdvice = (
   inventory: InventoryItem[],
   settings: RestaurantSettings,
 ): WasteReductionAdvice | null => {
-  if (!record) {
-    return null;
-  }
+  if (!record) return null;
 
   const hasWaste = record.wasteKg > 0;
   const soldOut = record.soldKg >= record.cookedKg && record.cookedKg > 0;
@@ -191,16 +215,7 @@ export const calculateWasteReductionAdvice = (
     const recommendedUsage = roundTo(recommendedCookKg * item.recipeUsagePerKg, decimals);
     const reduceBy = roundTo(Math.max(0, currentProductionUsage - recommendedUsage), decimals);
     const addBy = roundTo(Math.max(0, recommendedUsage - currentProductionUsage), decimals);
-
-    return {
-      itemId: item.id,
-      name: item.name,
-      unit: item.unit,
-      currentProductionUsage,
-      recommendedUsage,
-      reduceBy,
-      addBy,
-    };
+    return { itemId: item.id, name: item.name, unit: item.unit, currentProductionUsage, recommendedUsage, reduceBy, addBy };
   });
   const mode = soldOut ? 'increase' : hasWaste ? 'reduce' : 'maintain';
 
@@ -219,24 +234,17 @@ export const calculateWasteReductionAdvice = (
     possibleSavings,
     possibleExtraRevenue,
     summary: hasWaste
-      ? `You cooked ${formatKg(record.cookedKg)} and sold ${formatKg(record.soldKg)}. Add a ${bufferPercent}% demand buffer (${formatKg(bufferedDemandKg)}) and plan ingredients for ${formatKg(recommendedCookKg)}.`
+      ? `Cooked ${formatKg(record.cookedKg)}, sold ${formatKg(record.soldKg)}. Add ${bufferPercent}% buffer → plan ${formatKg(recommendedCookKg)}.`
       : soldOut
-        ? `You sold out ${formatKg(record.cookedKg)}. Add a ${bufferPercent}% growth buffer and plan ingredients for ${formatKg(recommendedCookKg)} next time.`
-        : `No waste on this record. Keep the plan near ${formatKg(record.cookedKg)}.`,
+        ? `Sold out ${formatKg(record.cookedKg)}. Add ${bufferPercent}% growth buffer → plan ${formatKg(recommendedCookKg)} next time.`
+        : `No waste. Keep the plan near ${formatKg(record.cookedKg)}.`,
     ingredientAdvice,
   };
 };
 
-export const calculateInventoryDaysRemaining = (
-  item: InventoryItem,
-  forecast: ForecastResult,
-) => {
-  const requirement = forecast.ingredientsRequired.find((ingredient) => ingredient.itemId === item.id);
+export const calculateInventoryDaysRemaining = (item: InventoryItem, forecast: ForecastResult) => {
+  const requirement = forecast.ingredientsRequired.find((r) => r.itemId === item.id);
   const dailyUsage = requirement?.requiredTomorrow ?? item.recipeUsagePerKg * forecast.recommendedCookKg;
-
-  if (dailyUsage <= 0) {
-    return 0;
-  }
-
+  if (dailyUsage <= 0) return 0;
   return roundTo(item.currentStock / dailyUsage, 1);
 };

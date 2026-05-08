@@ -1,6 +1,30 @@
 export type InventoryCategory = 'base' | 'protein' | 'vegetable' | 'oil' | 'garnish' | 'seasoning';
-
 export type UrgencyLevel = 'ok' | 'watch' | 'urgent';
+export type UserRole = 'admin' | 'manager' | 'bozorchi';
+export type PlanStatus = 'pending' | 'active' | 'completed';
+export type PurchaseStatus = 'pending' | 'submitted' | 'verified' | 'flagged';
+export type PriceStatus = 'normal' | 'high' | 'suspicious';
+
+export interface AppUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  pin: string;
+}
+
+export interface HolidayEvent {
+  id: string;
+  name: string;
+  date: string; // MM-DD recurring or YYYY-MM-DD one-time
+  demandMultiplier: number;
+  recurring: boolean;
+  type: 'national' | 'religious' | 'event';
+}
+
+export interface SeasonalPattern {
+  month: number; // 1-12
+  multiplier: number;
+}
 
 export interface ProductionRecord {
   id: string;
@@ -21,6 +45,95 @@ export interface InventoryItem {
   minimumStock: number;
   recipeUsagePerKg: number;
   category: InventoryCategory;
+}
+
+export interface ShoppingItem {
+  itemId: string;
+  name: string;
+  unit: InventoryItem['unit'];
+  quantity: number;
+  estimatedUnitPrice: number;
+  estimatedCost: number;
+  purchased: boolean;
+}
+
+export interface DailyPlan {
+  id: string;
+  date: string;
+  forecastKg: number;
+  plannedCookKg: number;
+  shoppingList: ShoppingItem[];
+  status: PlanStatus;
+  holidayId?: string;
+  holidayName?: string;
+  holidayMultiplier: number;
+  seasonalMultiplier: number;
+  dayOfWeekMultiplier: number;
+  notes: string;
+}
+
+export interface PurchaseOrderItem {
+  itemId: string;
+  name: string;
+  unit: InventoryItem['unit'];
+  plannedQty: number;
+  actualQty: number;
+  plannedUnitPrice: number;
+  actualUnitPrice: number;
+  priceVariancePercent: number;
+  flagged: boolean;
+  flagReason: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  date: string;
+  planId: string;
+  status: PurchaseStatus;
+  items: PurchaseOrderItem[];
+  submittedBy: string;
+  verifiedBy?: string;
+  totalPlannedCost: number;
+  totalActualCost: number;
+  overallVariancePercent: number;
+  createdAt: string;
+  reviewNote?: string;
+}
+
+export interface PriceRecord {
+  id: string;
+  itemId: string;
+  itemName: string;
+  unitPrice: number;
+  unit: InventoryItem['unit'];
+  date: string;
+  submittedBy: string;
+  status: PriceStatus;
+  deviationPercent: number;
+  orderId?: string;
+}
+
+export interface SupplierPerformance {
+  itemId: string;
+  itemName: string;
+  unit: InventoryItem['unit'];
+  avgUnitPrice: number;
+  minUnitPrice: number;
+  maxUnitPrice: number;
+  priceVolatility: number;
+  flaggedCount: number;
+  totalRecords: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
+export interface MonthlyForecast {
+  year: number;
+  month: number;
+  avgDailyKg: number;
+  totalForecastKg: number;
+  estimatedRevenue: number;
+  estimatedIngredientCost: number;
+  holidays: HolidayEvent[];
 }
 
 export interface IngredientRequirement {
@@ -51,6 +164,9 @@ export interface ForecastResult {
   message: string;
   ingredientsRequired: IngredientRequirement[];
   purchaseRecommendations: PurchaseRecommendation[];
+  holidayName?: string;
+  holidayMultiplier: number;
+  seasonalMultiplier: number;
 }
 
 export interface WasteReductionIngredientAdvice {

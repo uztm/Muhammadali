@@ -1,6 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { AppScreen } from '@/components/AppScreen';
 import { Card } from '@/components/Card';
@@ -46,7 +46,7 @@ export default function AnalyticsScreen() {
   return (
     <AppScreen title="Waste" subtitle="Spoilage, overproduction, and money loss" loading={loading} onRefresh={load}>
       {analytics ? (
-        <>
+        <View>
           <View style={styles.metricRow}>
             <MetricCard label="Weekly waste" value={formatKg(analytics.weeklyWasteKg)} detail="Last 7 days" tone="amber" />
             <MetricCard label="Waste rate" value={formatPercent(analytics.wasteRate)} detail="Cooked vs wasted" tone="red" />
@@ -103,7 +103,7 @@ export default function AnalyticsScreen() {
               </Text>
             </View>
           </Card>
-        </>
+        </View>
       ) : (
         <EmptyState title="No analytics yet" message="Production records are required for waste analytics." />
       )}
