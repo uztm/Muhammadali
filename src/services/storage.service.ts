@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { seedInventory, seedProductionRecords, defaultSettings, seedDailyPlans, seedPurchaseOrders, seedPriceRecords } from '@/services/seed.service';
-import { DailyPlan, InventoryItem, PriceRecord, ProductionRecord, PurchaseOrder, RestaurantSettings } from '@/types';
+import { DailyPlan, InventoryItem, Meal, PriceRecord, ProductionRecord, PurchaseOrder, RestaurantSettings, StockDelivery } from '@/types';
 
 const KEYS = {
   seeded: 'osh-markazi.seeded',
@@ -11,6 +11,8 @@ const KEYS = {
   dailyPlans: 'osh-markazi.daily-plans',
   purchaseOrders: 'osh-markazi.purchase-orders',
   priceRecords: 'osh-markazi.price-records',
+  meals: 'osh-markazi.meals',
+  stockDeliveries: 'osh-markazi.stock-deliveries',
 } as const;
 
 const parseJson = <T>(value: string | null, fallback: T): T => {
@@ -145,6 +147,44 @@ export const savePriceRecords = async (records: PriceRecord[]) => {
 export const addPriceRecords = async (newRecords: PriceRecord[]) => {
   const existing = await getPriceRecords();
   await savePriceRecords([...existing, ...newRecords]);
+};
+
+// Meals
+export const getMeals = async (): Promise<Meal[]> => {
+  const value = await AsyncStorage.getItem(KEYS.meals);
+  return parseJson<Meal[]>(value, []);
+};
+
+export const saveMeals = async (meals: Meal[]) => {
+  await AsyncStorage.setItem(KEYS.meals, JSON.stringify(meals));
+};
+
+export const upsertMeal = async (meal: Meal) => {
+  const meals = await getMeals();
+  const next = meals.filter((m) => m.id !== meal.id);
+  next.push(meal);
+  await saveMeals(next);
+};
+
+export const deleteMeal = async (mealId: string) => {
+  const meals = await getMeals();
+  await saveMeals(meals.filter((m) => m.id !== mealId));
+};
+
+// Stock Deliveries
+export const getStockDeliveries = async (): Promise<StockDelivery[]> => {
+  const value = await AsyncStorage.getItem(KEYS.stockDeliveries);
+  return parseJson<StockDelivery[]>(value, []);
+};
+
+export const saveStockDeliveries = async (deliveries: StockDelivery[]) => {
+  const sorted = [...deliveries].sort((a, b) => b.date.localeCompare(a.date));
+  await AsyncStorage.setItem(KEYS.stockDeliveries, JSON.stringify(sorted));
+};
+
+export const addStockDelivery = async (delivery: StockDelivery) => {
+  const deliveries = await getStockDeliveries();
+  await saveStockDeliveries([...deliveries, delivery]);
 };
 
 // Reset / Clear

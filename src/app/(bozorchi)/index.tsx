@@ -15,11 +15,12 @@ import { logout } from '@/services/auth.service';
 import { buildPurchaseOrderFromPlan } from '@/services/purchase.service';
 import {
   getDailyPlan,
+  getInventory,
   getPurchaseOrders,
   upsertDailyPlan,
   upsertPurchaseOrder,
 } from '@/services/storage.service';
-import { DailyPlan, PurchaseOrder, ShoppingItem } from '@/types';
+import { DailyPlan, InventoryItem, PurchaseOrder, ShoppingItem } from '@/types';
 import { todayKey } from '@/utils/date';
 import { formatCurrency } from '@/utils/format';
 
@@ -28,14 +29,17 @@ export default function BozorchiShoppingList() {
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [existingOrder, setExistingOrder] = useState<PurchaseOrder | null>(null);
+  const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
 
   const load = useCallback(async () => {
-    const [todayPlan, orders] = await Promise.all([
+    const [todayPlan, orders, inventory] = await Promise.all([
       getDailyPlan(todayKey()),
       getPurchaseOrders(),
+      getInventory(),
     ]);
     setPlan(todayPlan);
     setExistingOrder(orders.find((o) => o.date === todayKey()) ?? null);
+    setLowStockItems(inventory.filter((i) => i.currentStock <= i.minimumStock));
     setLoading(false);
   }, []);
 
@@ -82,6 +86,16 @@ export default function BozorchiShoppingList() {
           <Ionicons name="log-out-outline" size={20} color={theme.colors.muted} />
         </Pressable>
       }>
+
+      {lowStockItems.length > 0 ? (
+        <View style={styles.stockAlert}>
+          <Ionicons name="alert-circle-outline" size={16} color={theme.colors.red} />
+          <Text style={styles.stockAlertText}>
+            {lowStockItems.length} warehouse item(s) below minimum — manager notified.{' '}
+            {lowStockItems.map((i) => `${i.name} (${i.currentStock} ${i.unit})`).join(', ')}
+          </Text>
+        </View>
+      ) : null}
 
       {!plan ? (
         <EmptyState
@@ -193,4 +207,6 @@ const styles = StyleSheet.create({
   createOrderBtn: { height: 54, borderRadius: 17, backgroundColor: theme.colors.accent, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   createOrderBtnDisabled: { backgroundColor: theme.colors.surfaceAlt },
   createOrderBtnText: { color: theme.colors.surface, fontFamily: theme.font, fontSize: 16, fontWeight: '700' },
+  stockAlert: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: theme.colors.red + '10', borderRadius: theme.radius.sm, borderWidth: StyleSheet.hairlineWidth, borderColor: theme.colors.red + '40', padding: theme.spacing.md },
+  stockAlertText: { flex: 1, color: theme.colors.text, fontFamily: theme.font, fontSize: 13, lineHeight: 18 },
 });

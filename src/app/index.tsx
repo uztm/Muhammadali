@@ -16,6 +16,10 @@ export default function Index() {
         router.replace('/(admin)');
       } else if (user.role === 'manager') {
         router.replace('/(manager)');
+      } else if (user.role === 'warehouseman') {
+        router.replace('/(warehouseman)' as any);
+      } else if (user.role === 'chef') {
+        router.replace('/(chef)' as any);
       } else {
         router.replace('/(bozorchi)');
       }

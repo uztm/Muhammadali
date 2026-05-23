@@ -20,12 +20,16 @@ const ROLE_ICONS: Record<UserRole, TabIconName> = {
   admin: 'shield-checkmark-outline',
   manager: 'people-outline',
   bozorchi: 'cart-outline',
+  warehouseman: 'cube-outline',
+  chef: 'restaurant-outline',
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
   admin: theme.colors.accent,
   manager: theme.colors.blue,
   bozorchi: theme.colors.amber,
+  warehouseman: '#7C5C3E',
+  chef: '#C2410C',
 };
 
 export default function LoginScreen() {
@@ -65,6 +69,8 @@ export default function LoginScreen() {
     }
     if (user.role === 'admin') router.replace('/(admin)');
     else if (user.role === 'manager') router.replace('/(manager)');
+    else if (user.role === 'warehouseman') router.replace('/(warehouseman)' as any);
+    else if (user.role === 'chef') router.replace('/(chef)' as any);
     else router.replace('/(bozorchi)');
   };
 
@@ -156,7 +162,7 @@ export default function LoginScreen() {
               ))}
             </View>
 
-            <Text style={styles.hint}>Demo PINs: Admin 1234 · Manager 5678 · Bozorchi 0000</Text>
+            <Text style={styles.hint}>Demo PINs: Admin 1234 · Manager 5678 · Bozorchi 0000 · Warehouse 1111 · Chef 2222</Text>
           </View>
         )}
       </ScrollView>

@@ -12,12 +12,14 @@ const tabIcon = (name: TabIconName, color: string, focused: boolean) => (
   </View>
 );
 
-export default function ManagerLayout() {
+const CHEF_COLOR = '#C2410C';
+
+export default function ChefLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.blue,
+        tabBarActiveTintColor: CHEF_COLOR,
         tabBarInactiveTintColor: theme.colors.subtle,
         tabBarLabelStyle: styles.label,
         tabBarStyle: styles.tabBar,
@@ -26,36 +28,15 @@ export default function ManagerLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'grid' : 'grid-outline', color, focused),
-        }}
-      />
-      <Tabs.Screen
-        name="purchases"
-        options={{
-          title: 'Purchases',
-          tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'receipt' : 'receipt-outline', color, focused),
-        }}
-      />
-      <Tabs.Screen
-        name="planning"
-        options={{
-          title: 'Planning',
-          tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'calendar' : 'calendar-outline', color, focused),
-        }}
-      />
-      <Tabs.Screen
-        name="pricing"
-        options={{
-          title: 'Pricing',
-          tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'pricetag' : 'pricetag-outline', color, focused),
-        }}
-      />
-      <Tabs.Screen
-        name="menu"
-        options={{
-          title: 'Menu',
+          title: 'Meals',
           tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'restaurant' : 'restaurant-outline', color, focused),
+        }}
+      />
+      <Tabs.Screen
+        name="recipes"
+        options={{
+          title: 'Recipes',
+          tabBarIcon: ({ color, focused }) => tabIcon(focused ? 'list' : 'list-outline', color, focused),
         }}
       />
     </Tabs>

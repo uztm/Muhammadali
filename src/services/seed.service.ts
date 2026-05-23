@@ -136,6 +136,7 @@ export const seedDailyPlans = (
       seasonalMultiplier: seasonal,
       dayOfWeekMultiplier: DAY_MULTIPLIERS[day] ?? 1,
       notes: holiday ? `${holiday.name} — expect ${Math.round((holidayMult - 1) * 100)}% higher demand.` : '',
+      warehouseAccepted: isPast || daysFromToday === 0,
     };
   });
 };
@@ -161,6 +162,7 @@ export const seedPurchaseOrders = (
         unit: item.unit,
         plannedQty: item.quantity,
         actualQty: item.quantity,
+        receivedQty: item.quantity,
         plannedUnitPrice: item.estimatedUnitPrice,
         actualUnitPrice: actualPrice,
         priceVariancePercent: priceVariance,

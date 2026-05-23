@@ -81,6 +81,7 @@ export const generateDailyPlan = (
     seasonalMultiplier: seasonal,
     dayOfWeekMultiplier: dayMultiplier,
     notes: holiday ? `${holiday.name} — expect ${Math.round((holidayMultiplier - 1) * 100)}% higher demand.` : '',
+    warehouseAccepted: false,
   };
 };
 

@@ -24,6 +24,7 @@ const STATUS_TONE: Record<PurchaseStatus, 'red' | 'amber' | 'green' | 'blue'> = 
   submitted: 'blue',
   verified: 'green',
   flagged: 'red',
+  received: 'green',
 };
 
 export default function ManagerPurchasesScreen() {

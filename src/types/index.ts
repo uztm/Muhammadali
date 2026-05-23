@@ -1,8 +1,8 @@
 export type InventoryCategory = 'base' | 'protein' | 'vegetable' | 'oil' | 'garnish' | 'seasoning';
 export type UrgencyLevel = 'ok' | 'watch' | 'urgent';
-export type UserRole = 'admin' | 'manager' | 'bozorchi';
+export type UserRole = 'admin' | 'manager' | 'bozorchi' | 'warehouseman' | 'chef';
 export type PlanStatus = 'pending' | 'active' | 'completed';
-export type PurchaseStatus = 'pending' | 'submitted' | 'verified' | 'flagged';
+export type PurchaseStatus = 'pending' | 'submitted' | 'verified' | 'flagged' | 'received';
 export type PriceStatus = 'normal' | 'high' | 'suspicious';
 
 export interface AppUser {
@@ -70,6 +70,10 @@ export interface DailyPlan {
   seasonalMultiplier: number;
   dayOfWeekMultiplier: number;
   notes: string;
+  warehouseAccepted: boolean;
+  warehouseAcceptedBy?: string;
+  warehouseAcceptedAt?: string;
+  warehouseNote?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -78,6 +82,7 @@ export interface PurchaseOrderItem {
   unit: InventoryItem['unit'];
   plannedQty: number;
   actualQty: number;
+  receivedQty: number;
   plannedUnitPrice: number;
   actualUnitPrice: number;
   priceVariancePercent: number;
@@ -98,6 +103,9 @@ export interface PurchaseOrder {
   overallVariancePercent: number;
   createdAt: string;
   reviewNote?: string;
+  warehouseNote?: string;
+  warehouseAcceptedBy?: string;
+  warehouseAcceptedAt?: string;
 }
 
 export interface PriceRecord {
@@ -204,6 +212,38 @@ export interface RestaurantSettings {
   defaultCookKg: number;
   pricePerKg: number;
   safetyBufferPercent: number;
+}
+
+export interface MealIngredient {
+  itemId: string;
+  name: string;
+  unit: InventoryItem['unit'];
+  quantityPerKg: number;
+}
+
+export interface Meal {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdBy: string;
+  ingredients: MealIngredient[];
+}
+
+export interface StockDeliveryItem {
+  itemId: string;
+  name: string;
+  unit: InventoryItem['unit'];
+  expectedQty: number;
+  actualQty: number;
+}
+
+export interface StockDelivery {
+  id: string;
+  date: string;
+  registeredBy: string;
+  notes: string;
+  items: StockDeliveryItem[];
 }
 
 export interface WasteAnalytics {

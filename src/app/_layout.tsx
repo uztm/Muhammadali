@@ -32,6 +32,8 @@ export default function RootLayout() {
         <Stack.Screen name="(admin)" />
         <Stack.Screen name="(manager)" />
         <Stack.Screen name="(bozorchi)" />
+        <Stack.Screen name="(warehouseman)" />
+        <Stack.Screen name="(chef)" />
         <Stack.Screen name="dashboard" options={{ href: null } as any} />
         <Stack.Screen name="production" options={{ href: null } as any} />
         <Stack.Screen name="inventory" options={{ href: null } as any} />

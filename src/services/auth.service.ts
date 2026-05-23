@@ -10,6 +10,8 @@ export const defaultUsers: AppUser[] = [
   { id: 'admin-1', name: 'Admin', role: 'admin', pin: '1234' },
   { id: 'manager-1', name: 'Manager', role: 'manager', pin: '5678' },
   { id: 'bozorchi-1', name: 'Bozorchi', role: 'bozorchi', pin: '0000' },
+  { id: 'warehouseman-1', name: 'Warehouseman', role: 'warehouseman', pin: '1111' },
+  { id: 'chef-1', name: 'Chef', role: 'chef', pin: '2222' },
 ];
 
 export const getUsers = async (): Promise<AppUser[]> => {
@@ -69,6 +71,8 @@ export const roleLabel = (role: UserRole): string => {
     admin: 'Admin',
     manager: 'Manager',
     bozorchi: 'Bozorchi',
+    warehouseman: 'Warehouseman',
+    chef: 'Chef',
   };
   return labels[role];
 };
@@ -78,6 +82,8 @@ export const roleDescription = (role: UserRole): string => {
     admin: 'Full system control, analytics, and pricing oversight',
     manager: 'Validates purchases, monitors operations, manages pricing',
     bozorchi: 'Receives daily shopping lists and submits receipts',
+    warehouseman: 'Tracks warehouse stock, registers incoming deliveries',
+    chef: 'Manages menu meals and sets ingredient quantities per meal',
   };
   return desc[role];
 };

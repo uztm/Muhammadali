@@ -36,6 +36,7 @@ export const buildPurchaseOrderFromPlan = (
     unit: item.unit,
     plannedQty: item.quantity,
     actualQty: item.quantity,
+    receivedQty: 0,
     plannedUnitPrice: item.estimatedUnitPrice,
     actualUnitPrice: item.estimatedUnitPrice,
     priceVariancePercent: 0,

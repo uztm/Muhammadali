@@ -22,7 +22,7 @@ import {
   getPurchaseOrders,
   getSettings,
 } from '@/services/storage.service';
-import { DailyPlan, ForecastResult, ProductionRecord, PurchaseOrder } from '@/types';
+import { DailyPlan, ForecastResult, InventoryItem, ProductionRecord, PurchaseOrder } from '@/types';
 import { displayDate, sortByDateAsc, todayKey } from '@/utils/date';
 import { formatCurrency, formatKg } from '@/utils/format';
 import { sum } from '@/utils/math';
@@ -34,6 +34,7 @@ export default function ManagerDashboard() {
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [todayPlan, setTodayPlan] = useState<DailyPlan | null>(null);
+  const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
 
   const load = useCallback(async () => {
     const [nextRecords, inventory, settings, nextOrders, plans] = await Promise.all([
@@ -48,6 +49,7 @@ export default function ManagerDashboard() {
     setForecast(forecastNextDay(sorted, inventory, settings));
     setOrders(nextOrders);
     setTodayPlan(plans.find((p) => p.date === todayKey()) ?? null);
+    setLowStockItems(inventory.filter((i) => i.currentStock <= i.minimumStock));
     setLoading(false);
   }, []);
 
@@ -98,6 +100,38 @@ export default function ManagerDashboard() {
           icon="sparkles-outline"
           tone="blue"
         />
+      ) : null}
+
+      {lowStockItems.length > 0 ? (
+        <>
+          <SectionHeader title="Warehouse alert — items to buy" />
+          <Card style={styles.stockAlertCard}>
+            <View style={styles.stockAlertHeader}>
+              <Ionicons name="alert-circle-outline" size={18} color={theme.colors.red} />
+              <Text style={styles.stockAlertTitle}>
+                {lowStockItems.length} item(s) below minimum stock
+              </Text>
+            </View>
+            {lowStockItems.map((item) => (
+              <ListItem
+                key={item.id}
+                title={item.name}
+                subtitle={`Min: ${item.minimumStock} ${item.unit}`}
+                right={
+                  <View style={styles.stockItemRight}>
+                    <Text style={[styles.stockQty, item.currentStock <= item.minimumStock * 0.5 ? { color: theme.colors.red } : { color: theme.colors.amber }]}>
+                      {item.currentStock} {item.unit}
+                    </Text>
+                    <StatusBadge
+                      label={item.currentStock <= item.minimumStock * 0.5 ? 'Critical' : 'Low'}
+                      tone={item.currentStock <= item.minimumStock * 0.5 ? 'red' : 'amber'}
+                    />
+                  </View>
+                }
+              />
+            ))}
+          </Card>
+        </>
       ) : null}
 
       {flaggedOrders.length > 0 ? (
@@ -166,4 +200,9 @@ const styles = StyleSheet.create({
   prodRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   prodValue: { color: theme.colors.text, fontFamily: theme.font, fontSize: 24, fontWeight: '700' },
   prodLabel: { marginTop: 4, color: theme.colors.muted, fontFamily: theme.font, fontSize: 13, fontWeight: '600' },
+  stockAlertCard: { borderColor: theme.colors.red + '40', backgroundColor: theme.colors.red + '06' },
+  stockAlertHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  stockAlertTitle: { color: theme.colors.red, fontFamily: theme.font, fontSize: 14, fontWeight: '700', flex: 1 },
+  stockItemRight: { alignItems: 'flex-end', gap: 4 },
+  stockQty: { fontFamily: theme.font, fontSize: 14, fontWeight: '700' },
 });
